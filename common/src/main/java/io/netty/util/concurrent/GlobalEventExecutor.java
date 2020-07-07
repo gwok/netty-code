@@ -49,6 +49,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         @Override
         public void run() {
             // NOOP
+            System.out.println("NOOP");
         }
     }, null), ScheduledFutureTask.deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL), -SCHEDULE_QUIET_PERIOD_INTERVAL);
 

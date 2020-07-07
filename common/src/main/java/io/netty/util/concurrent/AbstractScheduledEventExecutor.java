@@ -51,6 +51,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return ScheduledFutureTask.nanoTime();
     }
 
+    //返回一个优先级队列
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
         if (scheduledTaskQueue == null) {
             scheduledTaskQueue = new DefaultPriorityQueue<ScheduledFutureTask<?>>(
@@ -95,14 +96,15 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     /**
-     * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}.
-     * You should use {@link #nanoTime()} to retrieve the correct {@code nanoTime}.
+     * 返回{@link Runnable}，它可以使用给定的{@code nanoTime}执行。
+     * 您应该使用{@link #nanoTime()}来检索正确的{@code nanoTime}。
      */
     protected final Runnable pollScheduledTask(long nanoTime) {
         assert inEventLoop();
 
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+//        System.out.println(scheduledTaskQueue+"----------");
         if (scheduledTask == null) {
             return null;
         }
@@ -127,6 +129,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     final ScheduledFutureTask<?> peekScheduledTask() {
+        //scheduledTaskQueue在创建NioEventGroup时就被实例化
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (scheduledTaskQueue == null) {
             return null;
@@ -152,6 +155,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
         validateScheduled0(delay, unit);
 
+        //通过 ScheduledFutureTask, 将用户自定义任务再次包装成一个netty内部的任务
         return schedule(new ScheduledFutureTask<Void>(
                 this, command, null, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
     }
@@ -229,9 +233,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (inEventLoop()) {
             scheduledTaskQueue().add(task);
         } else {
+            //进一步封装任务
             execute(new Runnable() {
                 @Override
                 public void run() {
+                    //scheduledTaskQueue()返回优先级队列
                     scheduledTaskQueue().add(task);
                 }
             });

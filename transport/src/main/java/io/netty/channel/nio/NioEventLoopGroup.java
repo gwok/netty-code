@@ -44,8 +44,8 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
-     * Create a new instance using the specified number of threads, {@link ThreadFactory} and the
-     * {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     * 使用指定线程数{@link ThreadFactory}和
+     * {@link SelectorProvider}，由{@link SelectorProvider#provider()}返回。
      */
     public NioEventLoopGroup(int nThreads) {
         this(nThreads, (Executor) null);
@@ -59,7 +59,10 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
         this(nThreads, threadFactory, SelectorProvider.provider());
     }
 
+
     public NioEventLoopGroup(int nThreads, Executor executor) {
+        //executor默认为null
+        //ServerSocketChannel    就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
         this(nThreads, executor, SelectorProvider.provider());
     }
 
@@ -69,6 +72,9 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      */
     public NioEventLoopGroup(
             int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
+        //threadFactory默认为null
+        //ServerSocketChannel    就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+        //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()
         this(nThreads, threadFactory, selectorProvider, DefaultSelectStrategyFactory.INSTANCE);
     }
 
@@ -79,11 +85,23 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     public NioEventLoopGroup(
             int nThreads, Executor executor, final SelectorProvider selectorProvider) {
+        //nThreads默认为零
+        //executor默认为null
+        //ServerSocketChannel    就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+        //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()   默认选择策略工厂
         this(nThreads, executor, selectorProvider, DefaultSelectStrategyFactory.INSTANCE);
     }
 
     public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory) {
+        //nThreads默认为零
+        //executor默认为null
+        //ServerSocketChannel    就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+        //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()
+
+        //线程池的拒绝策略，是指当任务添加到线程池中被拒绝，而采取的处理措施。
+        // 当任务添加到线程池中之所以被拒绝，可能是由于：第一，线程池异常关闭。第二，任务数量超过线程池的最大限制。
+        //RejectedExecutionHandlers.reject() ===》 new RejectedExecutionHandler()  ===>丢弃任务并抛出RejectedExecutionException异常。
         super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
     }
 
@@ -123,6 +141,12 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+        //executor=new ThreadPerTaskExecutor(newDefaultThreadFactory());
+
+        //args参数如下
+        //SelectorProvider     ServerSocketChannel就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+        //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()
+        //RejectedExecutionHandlers.reject() ===》 new RejectedExecutionHandler()
         return new NioEventLoop(this, executor, (SelectorProvider) args[0],
             ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
     }

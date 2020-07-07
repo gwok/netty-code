@@ -22,15 +22,20 @@ import io.netty.util.internal.StringUtil;
 import java.lang.reflect.Constructor;
 
 /**
- * A {@link ChannelFactory} that instantiates a new {@link Channel} by invoking its default constructor reflectively.
+ * ReflectiveChannelFactory  反射的channel工厂
+ * 根据传进来的channel  反射创建channel
  */
 public class ReflectiveChannelFactory<T extends Channel> implements ChannelFactory<T> {
 
     private final Constructor<? extends T> constructor;
 
     public ReflectiveChannelFactory(Class<? extends T> clazz) {
+
+        //判断不为空
         ObjectUtil.checkNotNull(clazz, "clazz");
         try {
+            //clazz=NioServerSocketChannel.class
+            //constructor=NioServerSocketChannel.class.getConstructor();
             this.constructor = clazz.getConstructor();
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Class " + StringUtil.simpleClassName(clazz) +
@@ -41,6 +46,7 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     @Override
     public T newChannel() {
         try {
+            // T=NioServerSocketChannel   constructor=NioServerSocketChannel.class.getConstructor();
             return constructor.newInstance();
         } catch (Throwable t) {
             throw new ChannelException("Unable to create Channel from class " + constructor.getDeclaringClass(), t);

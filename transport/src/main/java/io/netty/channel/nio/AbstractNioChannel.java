@@ -50,7 +50,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
+    //serverSocketChannel
     private final SelectableChannel ch;
+    //SelectionKey.OP_ACCEPT
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
     boolean readPending;
@@ -77,6 +79,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
+        //parent -->  null
+        //ch--> serverSocketChannel  服务器channel
+        //readInterestOp--->SelectionKey.OP_ACCEPT
+
+        //创建id，unsafe pipeline
         super(parent);
         this.ch = ch;
         this.readInterestOp = readInterestOp;
@@ -374,22 +381,25 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return loop instanceof NioEventLoop;
     }
 
+    //注册核心方法
     @Override
     protected void doRegister() throws Exception {
         boolean selected = false;
         for (;;) {
             try {
+                //javaChannel()   ==>  ServerSocketChannel 通过反射创建出来nio底层channel
+                //调用Nio底层将ServerSocketChannel注册到selector上
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
-                    // Force the Selector to select now as the "canceled" SelectionKey may still be
-                    // cached and not removed because no Select.select(..) operation was called yet.
+                    //强制选择器现在选择，因为“已取消”的SelectionKey可能仍然是
+                    //缓存并没有删除，因为还没有调用Select.select(..)操作。
                     eventLoop().selectNow();
                     selected = true;
                 } else {
-                    // We forced a select operation on the selector before but the SelectionKey is still cached
-                    // for whatever reason. JDK bug ?
+                    //我们之前在选择器上强制执行了select操作，但是SelectionKey仍然缓存
+                    //不管什么原因。JDK错误?
                     throw e;
                 }
             }

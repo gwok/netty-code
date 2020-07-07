@@ -38,7 +38,7 @@ public final class ThreadExecutorMap {
     }
 
     /**
-     * Set the current {@link EventExecutor} that is used by the {@link Thread}.
+     * 设置{@link Thread}使用的当前{@link EventExecutor}。
      */
     private static void setCurrentEventExecutor(EventExecutor executor) {
         mappings.set(executor);
@@ -51,24 +51,32 @@ public final class ThreadExecutorMap {
     public static Executor apply(final Executor executor, final EventExecutor eventExecutor) {
         ObjectUtil.checkNotNull(executor, "executor");
         ObjectUtil.checkNotNull(eventExecutor, "eventExecutor");
+        //executor=new ThreadPerTaskExecutor(newDefaultThreadFactory());
+        //eventExecutor=SingleThreadEventExecutor.this
         return new Executor() {
             @Override
             public void execute(final Runnable command) {
+                //apply(command, eventExecutor) 任然返回Runnable对象  真正执行时执行的是command.run方法
                 executor.execute(apply(command, eventExecutor));
             }
         };
     }
 
     /**
-     * Decorate the given {@link Runnable} and ensure {@link #currentExecutor()} will return {@code eventExecutor}
-     * when called from within the {@link Runnable} during execution.
+     * 修饰给定的{@link Runnable}，并确保{@link #currentExecutor()}将返回{@code eventExecutor}
+     * 在执行期间从{@link Runnable}中调用。
      */
     public static Runnable apply(final Runnable command, final EventExecutor eventExecutor) {
         ObjectUtil.checkNotNull(command, "command");
         ObjectUtil.checkNotNull(eventExecutor, "eventExecutor");
+        //command=线程任务对象
+        //eventExecutor=SingleThreadEventExecutor
         return new Runnable() {
             @Override
             public void run() {
+                //类似 private ThreadLocal<String> threadLocal=new ThreadLocal<>();
+                //threadLocal.set(eventExecutor);
+                //执行任务之前  保存一个eventExecutor对象
                 setCurrentEventExecutor(eventExecutor);
                 try {
                     command.run();

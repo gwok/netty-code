@@ -75,10 +75,18 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
      */
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
+        /**
+         *
+         * @param alloc  内存分配器
+         * @param cumulation  老数据
+         * @param in    本次数据
+         * @return
+         */
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
             try {
                 final ByteBuf buffer;
+                //如果因为空间满了写不了本次的新数据  就扩容
                 if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
                     || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
                     // Expand cumulation (by replace it) when either there is not more room in the buffer
@@ -92,6 +100,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 } else {
                     buffer = cumulation;
                 }
+                //将新数据写入
                 buffer.writeBytes(in);
                 return buffer;
             } finally {
@@ -269,8 +278,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 ByteBuf data = (ByteBuf) msg;
                 first = cumulation == null;
                 if (first) {
+                    //第一次直接赋值
                     cumulation = data;
                 } else {
+                    //累加
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
                 }
                 callDecode(ctx, cumulation, out);
@@ -318,6 +329,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
         for (int i = 0; i < numElements; i ++) {
+            //将buffer向下传播
             ctx.fireChannelRead(msgs.getUnsafe(i));
         }
     }
@@ -497,6 +509,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             throws Exception {
         decodeState = STATE_CALLING_CHILD_DECODE;
         try {
+            //调用子类的解码方法
             decode(ctx, in, out);
         } finally {
             boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;

@@ -75,6 +75,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      */
     public DefaultPromise(EventExecutor executor) {
+        //NioEventLoop.this
         this.executor = checkNotNull(executor, "executor");
     }
 

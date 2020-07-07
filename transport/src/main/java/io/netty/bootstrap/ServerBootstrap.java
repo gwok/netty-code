@@ -48,7 +48,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
+    //workerGroup
     private volatile EventLoopGroup childGroup;
+    //new ChannelInitializer
     private volatile ChannelHandler childHandler;
 
     public ServerBootstrap() { }
@@ -79,11 +81,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@link Channel}'s.
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+        //bossGroup,workerGroup
         super.group(parentGroup);
         ObjectUtil.checkNotNull(childGroup, "childGroup");
         if (this.childGroup != null) {
             throw new IllegalStateException("childGroup set already");
         }
+        //childGroup=workerGroup
         this.childGroup = childGroup;
         return this;
     }
@@ -94,6 +98,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@link ChannelOption}.
      */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
+        //childOptions=new LinkedHashMap<ChannelOption<?>, Object>();
         ObjectUtil.checkNotNull(childOption, "childOption");
         if (value == null) {
             synchronized (childOptions) {
@@ -125,17 +130,23 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
      */
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
+        // this.childHandler=new ChannelInitializer<ServerSocketChannel>()
         this.childHandler = ObjectUtil.checkNotNull(childHandler, "childHandler");
         return this;
     }
 
     @Override
     void init(Channel channel) throws Exception {
+
+        //channel=NioServerSocketChannel
+
+        //options0  获取的是用户自己设置的tcp参数  ServerBootstrap.option(ChannelOption.SO_BACKLOG,128)
         final Map<ChannelOption<?>, Object> options = options0();
         synchronized (options) {
+            //设置用户设置的tcp参数
             setChannelOptions(channel, options, logger);
         }
-
+        //attrs0()  ServerBootstrap.attr()  获取用户设置的attr参数
         final Map<AttributeKey<?>, Object> attrs = attrs0();
         synchronized (attrs) {
             for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
@@ -145,6 +156,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
         }
 
+        //channel=NioServerSocketChannel
+        //获取AbstractChannel.pipeline();的pipeline（DefaultChannelPipeline）
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
@@ -157,11 +170,16 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         synchronized (childAttrs) {
             currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
         }
-
+        //该实例ChannelInitializer最先被放入到管道pipeline，执行后，一开始手动设置的的handler和ServerBootstrapAcceptor也会被
+        //加入到管道pipeline里，而ChannelInitializer在执行完后就会将其从管道pipeline里删除。
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) throws Exception {
+                //System.out.println(ch==channel);   true
                 final ChannelPipeline pipeline = ch.pipeline();
+                //System.out.println(pipeline==p);  true
+                //config.handler()=自己创建的new ChannelInitializer<ServerSocketChannel>()
+                //这里的handler，若在服务端有设置serverBootstrap.handler(new xxxxHandler)，那这里的handler就是xxxxHandler
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
                     pipeline.addLast(handler);
@@ -170,6 +188,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
+//                        System.out.println("执行了");
+                        //bossGroup将客户端连接转交给workerGroup
                         pipeline.addLast(new ServerBootstrapAcceptor(
                                 ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }
@@ -212,7 +232,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         ServerBootstrapAcceptor(
                 final Channel channel, EventLoopGroup childGroup, ChannelHandler childHandler,
                 Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
+            //workerGroup  childGroup
             this.childGroup = childGroup;
+            //我们自定义的ChannelInitializer
             this.childHandler = childHandler;
             this.childOptions = childOptions;
             this.childAttrs = childAttrs;

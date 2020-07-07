@@ -53,8 +53,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private static ServerSocketChannel newSocket(SelectorProvider provider) {
         try {
             /**
-             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-             *  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
+             *  使用{@link SelectorProvider}打开{@link SocketChannel}，从而删除条件in
+             *  否则，每个ServerSocketChannel.open()将调用{@link SelectorProvider#provider()}。
              *
              *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
              */
@@ -68,9 +68,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private final ServerSocketChannelConfig config;
 
     /**
-     * Create a new instance
+     * 创建一个新实例
+     * 反射创建NioServerSocketChannel调用
      */
     public NioServerSocketChannel() {
+        //newSocket(DEFAULT_SELECTOR_PROVIDER)返回 ServerSocketChannel
         this(newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
@@ -86,6 +88,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);
+        //javaChannel()==>  serverSocketChannel
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 
@@ -126,6 +129,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         return SocketUtils.localSocketAddress(javaChannel().socket());
     }
 
+    //调用nio  api绑定ip端口
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         if (PlatformDependent.javaVersion() >= 7) {
@@ -196,6 +200,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     private final class NioServerSocketChannelConfig extends DefaultServerSocketChannelConfig {
         private NioServerSocketChannelConfig(NioServerSocketChannel channel, ServerSocket javaSocket) {
+            // channel  --> NioServerSocketChannel
+            //javaSocket==>  serverSocketChannel.socket()  服务端channel  nio  api
             super(channel, javaSocket);
         }
 
@@ -204,6 +210,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
             clearReadPending();
         }
 
+        //设置用户设置的tcp参数
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
             if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {

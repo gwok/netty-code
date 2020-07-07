@@ -45,12 +45,12 @@ import java.io.Serializable;
  */
 public interface ChannelId extends Serializable, Comparable<ChannelId> {
     /**
-     * Returns the short but globally non-unique string representation of the {@link ChannelId}.
+     * 返回此channel通道的简短但全局非惟一的字符串表示形式。
      */
     String asShortText();
 
     /**
-     * Returns the long yet globally unique string representation of the {@link ChannelId}.
+     * 返回此通道的长但全局唯一的字符串表示形式。
      */
     String asLongText();
 }

@@ -19,11 +19,17 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
 
+    //handler=new ChannelInitializer<Channel>
     private final ChannelHandler handler;
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutor executor, String name, ChannelHandler handler) {
+        //pipeline=DefaultChannelPipeline
+        //executor=null
+        //name =没传系统默认创建
+        //handler=new ChannelInitializer<Channel>
         super(pipeline, executor, name, handler.getClass());
+        //此Handler是ChannelInitializer
         this.handler = handler;
     }
 

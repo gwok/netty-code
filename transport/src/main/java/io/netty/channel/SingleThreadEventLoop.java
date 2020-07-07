@@ -55,7 +55,14 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor,
                                     boolean addTaskWakesUp, int maxPendingTasks,
                                     RejectedExecutionHandler rejectedExecutionHandler) {
+        //NioEventLoopGroup.this
+        //executor=new ThreadPerTaskExecutor(newDefaultThreadFactory());
+        // addTaskWakesUp=false
+        //maxPendingTasks=2147483647  默认最大挂起任务
+        //rejectedExecutionHandler ===》 new RejectedExecutionHandler()
         super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
+
+        //tailTasks=new LinkedBlockingQueue<Runnable>(maxPendingTasks);
         tailTasks = newTaskQueue(maxPendingTasks);
     }
 
@@ -71,12 +78,16 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     @Override
     public ChannelFuture register(Channel channel) {
+        //channel=NioServerSocketChannel
         return register(new DefaultChannelPromise(channel, this));
     }
 
     @Override
     public ChannelFuture register(final ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
+        //promise=DefaultChannelPromise
+        //promise.channel()=NioServerSocketChannel
+        //Unsafe=AbstractChannel.unsafe=promise.channel().unsafe();
         promise.channel().unsafe().register(this, promise);
         return promise;
     }
@@ -138,6 +149,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         runAllTasksFrom(tailTasks);
     }
 
+    //判断taskQueue  or  tailTasks队列中是否有任务
     @Override
     protected boolean hasTasks() {
         return super.hasTasks() || !tailTasks.isEmpty();

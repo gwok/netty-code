@@ -53,9 +53,11 @@ public class DefaultChannelConfig implements ChannelConfig {
             AtomicReferenceFieldUpdater.newUpdater(
                     DefaultChannelConfig.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
 
+    //NioServerSocketChannel
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
+    //待详看
     private volatile RecvByteBufAllocator rcvBufAllocator;
     private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
 
@@ -68,10 +70,13 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile boolean pinEventExecutor = true;
 
     public DefaultChannelConfig(Channel channel) {
+        // channel  --> NioServerSocketChannel
         this(channel, new AdaptiveRecvByteBufAllocator());
     }
 
     protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
+        // channel  --> NioServerSocketChannel
+        //allocator  预测器
         setRecvByteBufAllocator(allocator, channel.metadata());
         this.channel = channel;
     }

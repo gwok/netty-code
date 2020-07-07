@@ -44,6 +44,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     protected AbstractEventExecutor(EventExecutorGroup parent) {
+        //parent=NioEventLoopGroup.this
         this.parent = parent;
     }
 
@@ -156,7 +157,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     /**
-     * Try to execute the given {@link Runnable} and just log if it throws a {@link Throwable}.
+     * 尝试执行给定的{@link Runnable}，如果它抛出{@link Throwable}，则只记录日志。
      */
     protected static void safeExecute(Runnable task) {
         try {

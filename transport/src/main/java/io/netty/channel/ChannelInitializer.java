@@ -105,10 +105,12 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isRegistered()) {
-            // This should always be true with our current DefaultChannelPipeline implementation.
-            // The good thing about calling initChannel(...) in handlerAdded(...) is that there will be no ordering
-            // surprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
-            // will be added in the expected order.
+            //对于当前的DefaultChannelPipeline实现，这应该总是正确的。
+            //在handlerAdded(…)中调用initChannel(…)的好处是没有订单
+            //如果一个通道初始化器将添加另一个通道初始化器，会让人感到惊讶。这是所有的处理程序
+            //将按预期顺序添加。
+
+
             if (initChannel(ctx)) {
 
                 // We are done with init the Channel, removing the initializer now.
@@ -126,12 +128,14 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
         if (initMap.add(ctx)) { // Guard against re-entrance.
             try {
+                //我们写的ChannelInitializer.initChannel的方法 将在这里被调用
                 initChannel((C) ctx.channel());
             } catch (Throwable cause) {
                 // Explicitly call exceptionCaught(...) as we removed the handler before calling initChannel(...).
                 // We do so to prevent multiple calls to initChannel(...).
                 exceptionCaught(ctx, cause);
             } finally {
+                //删除此节点
                 ChannelPipeline pipeline = ctx.pipeline();
                 if (pipeline.context(this) != null) {
                     pipeline.remove(this);

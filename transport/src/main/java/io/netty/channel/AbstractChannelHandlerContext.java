@@ -98,6 +98,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor,
                                   String name, Class<? extends ChannelHandler> handlerClass) {
+        //pipeline=DefaultChannelPipeline
+        //executor=null
+        //name =没传系统默认创建
+        //handler=TailContext.class
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
         this.executor = executor;
@@ -960,6 +964,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     final void callHandlerAdded() throws Exception {
         // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
         // any pipeline events ctx.handler() will miss them because the state will not allow it.
+        //判断handlerState等于1  并且设置handlerState为2
         if (setAddComplete()) {
             handler().handlerAdded(this);
         }

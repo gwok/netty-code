@@ -42,7 +42,8 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
 
     private final long id = nextTaskId.getAndIncrement();
     private long deadlineNanos;
-    /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
+    /* 0 -无重复，> -固定速率重复，<0 -固定延迟重复*/
+    /* 1.若干时间后执行一次 2.每隔一段时间执行一次 3.每次执行结束，隔一定时间再执行一次*/
     private final long periodNanos;
 
     private int queueIndex = INDEX_NOT_IN_QUEUE;
@@ -71,6 +72,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
             Callable<V> callable, long nanoTime) {
 
         super(executor, callable);
+
         deadlineNanos = nanoTime;
         periodNanos = 0;
     }
@@ -80,12 +82,12 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return super.executor();
     }
 
-    public long deadlineNanos() {
-        return deadlineNanos;
-    }
-
     public long delayNanos() {
         return Math.max(0, deadlineNanos() - nanoTime());
+    }
+
+    public long deadlineNanos() {
+        return deadlineNanos;
     }
 
     public long delayNanos(long currentTimeNanos) {
@@ -97,6 +99,12 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return unit.convert(delayNanos(), TimeUnit.NANOSECONDS);
     }
 
+    /**
+     *先比较任务的截止时间，
+     * 截止时间相同的情况下，再比较id，即任务添加的顺序，
+     * 如果id再相同的话，就抛Error
+     * 这样，在执行定时任务的时候，就能保证最近截止时间的任务先执行
+     */
     @Override
     public int compareTo(Delayed o) {
         if (this == o) {
@@ -122,17 +130,26 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     public void run() {
         assert executor().inEventLoop();
         try {
+            //periodNanos == 0对应 若干时间后执行一次 的定时任务类型，执行完了该任务就结束了
             if (periodNanos == 0) {
                 if (setUncancellableInternal()) {
                     V result = task.call();
                     setSuccessInternal(result);
                 }
             } else {
-                // check if is done as it may was cancelled
+                // 做检查  因为它可能被取消
                 if (!isCancelled()) {
+                    //先执行任务
                     task.call();
                     if (!executor().isShutdown()) {
+                        //区分是哪种类型的任务
                         long p = periodNanos;
+                        /**
+                         * periodNanos大于0，表示是以固定频率执行某个任务，和任务的持续时间无关，
+                         * 然后，设置该任务的下一次截止时间为本次的截止时间加上间隔时间periodNanos，
+                         * 否则，就是每次任务执行完毕之后，间隔多长时间之后再次执行，截止时间为当前时间加上间隔时间，
+                         * -p就表示加上一个正的间隔时间，最后，将当前任务对象再次加入到队列，实现任务的定时执行
+                         */
                         if (p > 0) {
                             deadlineNanos += p;
                         } else {

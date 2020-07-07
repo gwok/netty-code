@@ -47,8 +47,16 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     /**
      * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, Executor, Object...)
+     * nThreads如果不传默认是0  如果是0的话  就获取CPU核数的两倍
      */
     protected MultithreadEventLoopGroup(int nThreads, Executor executor, Object... args) {
+        //nThreads默认为零
+        //executor默认为null
+        //SelectorProvider     ServerSocketChannel就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+        //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()
+        //RejectedExecutionHandlers.reject() ===》 new RejectedExecutionHandler()
+
+        //nThreads如果不传默认是0  如果是0的话  就获取CPU核数的两倍  DEFAULT_EVENT_LOOP_THREADS==CPU核数的两倍
         super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, executor, args);
     }
 
@@ -56,6 +64,11 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
      * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)
      */
     protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
+        //nThreads默认不传就是0
+        //threadFactory默认为null
+        //ServerSocketChannel    就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+        //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()
+        //RejectedExecutionHandlers.reject() ===》 new RejectedExecutionHandler()
         super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
     }
 
@@ -70,6 +83,8 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     @Override
     protected ThreadFactory newDefaultThreadFactory() {
+        //Thread.MAX_PRIORITY   ==>  线程可以拥有的最大优先级。  10
+        //getClass()===>NioEventLoopGroup.class
         return new DefaultThreadFactory(getClass(), Thread.MAX_PRIORITY);
     }
 
@@ -83,6 +98,8 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     @Override
     public ChannelFuture register(Channel channel) {
+        //channel=NioServerSocketChannel
+        // next()=NioEventLoop
         return next().register(channel);
     }
 

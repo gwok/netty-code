@@ -77,12 +77,12 @@ import java.net.SocketAddress;
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparable<Channel> {
 
     /**
-     * Returns the globally unique identifier of this {@link Channel}.
+     * 返回此{@link通道}的全局惟一标识符。
      */
     ChannelId id();
 
     /**
-     * Return the {@link EventLoop} this {@link Channel} was registered to.
+     * 返回此通道注册的EventLoop
      */
     EventLoop eventLoop();
 

@@ -185,16 +185,17 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
  * @see LengthFieldPrepender
  */
 public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
-
+    //   |http的各种头信息....|数据长度|数据|
+    //数据长度有两种策略：①只表示“数据”的长度;②表示“数据长度”本身的长度（也就是字节数）+ “数据”的长度
     private final ByteOrder byteOrder;
-    private final int maxFrameLength;
-    private final int lengthFieldOffset;
-    private final int lengthFieldLength;
-    private final int lengthFieldEndOffset;
-    private final int lengthAdjustment;
-    private final int initialBytesToStrip;
-    private final boolean failFast;
-    private boolean discardingTooLongFrame;
+    private final int maxFrameLength;//数据最大长度
+    private final int lengthFieldOffset;//长度字段的偏差(偏移量)，就是第二个|那里
+    private final int lengthFieldLength;//长度字段占的字节数
+    private final int lengthFieldEndOffset;//lengthFieldOffset + lengthFieldLength
+    private final int lengthAdjustment;//添加到长度字段的补偿值【一般为负数，为第②种策略而存在的，抵掉“数据长度”本身的长度。】
+    private final int initialBytesToStrip;//从解码帧中第一次去除的字节数，忽略包头信息，返给上层时会去掉这部分bytes，
+    private final boolean failFast;//解包出错，控制抛异常，默认为true，无需关心这选项
+    private boolean discardingTooLongFrame;//是否丢弃处理
     private long tooLongFrameLength;
     private long bytesToDiscard;
 
@@ -400,11 +401,15 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             discardingTooLongFrame(in);
         }
 
+        //lengthFieldEndOffset等于偏移量+长度域长度
         if (in.readableBytes() < lengthFieldEndOffset) {
             return null;
         }
 
+        //actualLengthFieldOffset长度域的位置
         int actualLengthFieldOffset = in.readerIndex() + lengthFieldOffset;
+
+        //内容长度
         long frameLength = getUnadjustedFrameLength(in, actualLengthFieldOffset, lengthFieldLength, byteOrder);
 
         if (frameLength < 0) {

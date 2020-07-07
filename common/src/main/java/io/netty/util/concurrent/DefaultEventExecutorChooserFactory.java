@@ -20,6 +20,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * 使用简单的循环选择next的默认实现
  * Default implementation which uses simple round-robin to choose next {@link EventExecutor}.
  */
 @UnstableApi
@@ -32,6 +33,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
     @SuppressWarnings("unchecked")
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
+        // executors是 new NioEventLoop() 的对象数组
         if (isPowerOfTwo(executors.length)) {
             return new PowerOfTwoEventExecutorChooser(executors);
         } else {
@@ -39,6 +41,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         }
     }
 
+    //判断幂等性  2.4.8.16
     private static boolean isPowerOfTwo(int val) {
         return (val & -val) == val;
     }
@@ -48,11 +51,16 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         private final EventExecutor[] executors;
 
         PowerOfTwoEventExecutorChooser(EventExecutor[] executors) {
+            // executors是 new NioEventLoop() 的对象数组
             this.executors = executors;
         }
 
+        //从executors对象数组中返回new NioEventLoop()对象
         @Override
         public EventExecutor next() {
+//            if(executors.length==8){
+//                System.out.println("boosGroup--------------"+(executors.length - 1));
+//            }
             return executors[idx.getAndIncrement() & executors.length - 1];
         }
     }
@@ -62,9 +70,11 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         private final EventExecutor[] executors;
 
         GenericEventExecutorChooser(EventExecutor[] executors) {
+            // executors是 new NioEventLoop() 的对象数组
             this.executors = executors;
         }
 
+        //从executors对象数组中返回new NioEventLoop()对象
         @Override
         public EventExecutor next() {
             return executors[Math.abs(idx.getAndIncrement() % executors.length)];

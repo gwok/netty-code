@@ -101,6 +101,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * @param socket    the {@link SocketChannel} which will be used
      */
     public NioSocketChannel(Channel parent, SocketChannel socket) {
+
+        //parent=NioServerSocketChannel
+        //socket=SocketChannel   客户端channel
         super(parent, socket);
         config = new NioSocketChannelConfig(this, socket.socket());
     }
@@ -372,6 +375,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
+    //处理后响应客户端  向客户端写数据
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         SocketChannel ch = javaChannel();

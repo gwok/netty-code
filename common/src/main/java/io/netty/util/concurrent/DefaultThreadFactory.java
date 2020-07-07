@@ -52,6 +52,8 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(Class<?> poolType, int priority) {
+        //Thread.MAX_PRIORITY   ==>  线程可以拥有的最大优先级。  10
+        //getClass()===>NioEventLoopGroup.class
         this(poolType, false, priority);
     }
 
@@ -60,21 +62,31 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(Class<?> poolType, boolean daemon, int priority) {
+        //Thread.MAX_PRIORITY   ==>  线程可以拥有的最大优先级。  10
+        //poolType===>NioEventLoopGroup.class
+        //daemon =false    是否是守护线程，后台程序
+
+        //toPoolName()=nioEventLoopGroup
         this(toPoolName(poolType), daemon, priority);
     }
 
+    //根据类类型（class）获取类名   并且把首字母转为小写
     public static String toPoolName(Class<?> poolType) {
         if (poolType == null) {
             throw new NullPointerException("poolType");
         }
 
+        //获取类名
         String poolName = StringUtil.simpleClassName(poolType);
         switch (poolName.length()) {
             case 0:
                 return "unknown";
             case 1:
+                //将大写字母转为小写
                 return poolName.toLowerCase(Locale.US);
             default:
+                //isUpperCase() 方法用于判断指定字符是否为大写字母
+                //isLowerCase() 方法用于判断指定字符是否为小写字母。
                 if (Character.isUpperCase(poolName.charAt(0)) && Character.isLowerCase(poolName.charAt(1))) {
                     return Character.toLowerCase(poolName.charAt(0)) + poolName.substring(1);
                 } else {
@@ -84,6 +96,11 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(String poolName, boolean daemon, int priority, ThreadGroup threadGroup) {
+        //poolName=nioEventLoopGroup
+        //daemon =false    是否是守护进程，后台程序
+        //priority  ==>  线程可以拥有的最大优先级。  10
+        //threadGroup  线程组
+
         if (poolName == null) {
             throw new NullPointerException("poolName");
         }
@@ -92,19 +109,29 @@ public class DefaultThreadFactory implements ThreadFactory {
                     "priority: " + priority + " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
         }
 
+        //prefix=nioEventLoopGroup-（原子计数器++）-
         prefix = poolName + '-' + poolId.incrementAndGet() + '-';
+        //false
         this.daemon = daemon;
+        //10
         this.priority = priority;
         this.threadGroup = threadGroup;
     }
 
     public DefaultThreadFactory(String poolName, boolean daemon, int priority) {
+        //poolName=nioEventLoopGroup
+        //daemon =false    是否是守护进程，后台程序
+        //priority  ==>  线程可以拥有的最大优先级。  10
+
+        //System.getSecurityManager() == null     判断有没有安全管理器
         this(poolName, daemon, priority, System.getSecurityManager() == null ?
                 Thread.currentThread().getThreadGroup() : System.getSecurityManager().getThreadGroup());
     }
 
+    //创建一个线程
     @Override
     public Thread newThread(Runnable r) {
+        //FastThreadLocalRunnable.wrap(r)  本质还是Runnable
         Thread t = newThread(FastThreadLocalRunnable.wrap(r), prefix + nextId.incrementAndGet());
         try {
             if (t.isDaemon() != daemon) {

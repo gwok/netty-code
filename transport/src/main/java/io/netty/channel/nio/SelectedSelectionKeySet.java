@@ -88,11 +88,15 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
         reset(0);
     }
 
+    // 将key数组从start位到size位全置为null
     void reset(int start) {
         Arrays.fill(keys, start, size, null);
         size = 0;
     }
 
+    /**
+     * 将数组大小变为原来的2倍
+     */
     private void increaseCapacity() {
         SelectionKey[] newKeys = new SelectionKey[keys.length << 1];
         System.arraycopy(keys, 0, newKeys, 0, size);

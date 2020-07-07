@@ -167,6 +167,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, 128);
     }
 
+    /**
+     *
+     * @param maxInitialLineLength   4096
+     * @param maxHeaderSize   8192
+     * @param maxChunkSize    8192
+     * @param chunkedSupported  true
+     * @param validateHeaders    true
+     * @param initialBufferSize  128
+     */
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {

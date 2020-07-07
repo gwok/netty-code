@@ -23,6 +23,7 @@ import java.util.Set;
 
 final class SelectedSelectionKeySetSelector extends Selector {
     private final SelectedSelectionKeySet selectionKeys;
+    //类中selectedKeys替换过数据类型的Selector
     private final Selector delegate;
 
     SelectedSelectionKeySetSelector(Selector delegate, SelectedSelectionKeySet selectionKeys) {

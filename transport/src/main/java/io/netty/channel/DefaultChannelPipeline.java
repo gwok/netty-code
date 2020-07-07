@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * The default {@link ChannelPipeline} implementation.  It is usually created
  * by a {@link Channel} implementation when the {@link Channel} is created.
  */
+
 public class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
@@ -81,6 +82,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      * Thus full iterations to do insertions is assumed to be a good compromised to saving memory and tail management
      * complexity.
      */
+    //new PendingHandlerAddedTask(new DefaultChannelHandlerContext())
+
     private PendingHandlerCallback pendingHandlerCallbackHead;
 
     /**
@@ -94,7 +97,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise =  new VoidChannelPromise(channel, true);
 
+        //创建尾结点
         tail = new TailContext(this);
+        //创建头节点   头节点中维护了AbstractChannel中unsafe对象
         head = new HeadContext(this);
 
         head.next = tail;
@@ -117,6 +122,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
+        //group=null
+        //name =没传系统默认创建
+        //handler=new ChannelInitializer<Channel>
         return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
     }
 
@@ -166,6 +174,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
             // In this case we add the context to the pipeline and add a task that will call
             // ChannelHandler.handlerAdded(...) once the channel is registered.
+            //---------------------------------------------------------------------------------
+            // 如果registered为false的话意味着channel【我猜是NioServerSocketChannel】还仍未被注册到eventLoop【也就是最先
+            // 碰到任务而开启的线程，在SingleThreadEventExecutor里的doStartThread方法就可知，其会执行NioEventLoop对象的父
+            // 类SingleThreadEventExecutor的run方法，而真正实现了该run方法的是NioEventLoop，所以最终还是NioEventLoop对象
+            // 被使用了】上，在本例中，
+            // 我们将context【DefaultChannelHandlerContext，该context包装了handler】添加到管道pipeline上，
+            // 并添加一个task,该task将在channel被注册之后调用ChannelHandler.handlerAdded(...)方法。
             if (!registered) {
                 newCtx.setAddPending();
                 callHandlerCallbackLater(newCtx, true);
@@ -197,10 +212,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
+        //group=null
+        //name =null
+        //handler=new ChannelInitializer<Channel>
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            //检查添加
             checkMultiplicity(handler);
 
+            //filterName(name, handler)   当我们没有指定名字时  给我们默认生成一个
+            //new DefaultChannelHandlerContext()
             newCtx = newContext(group, filterName(name, handler), handler);
 
             addLast0(newCtx);
@@ -209,11 +230,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // In this case we add the context to the pipeline and add a task that will call
             // ChannelHandler.handlerAdded(...) once the channel is registered.
             if (!registered) {
+                //判断handlerState属性等于0  并且设置为1
                 newCtx.setAddPending();
                 callHandlerCallbackLater(newCtx, true);
                 return this;
             }
 
+            //返回NioEvenGroup
             EventExecutor executor = newCtx.executor();
             if (!executor.inEventLoop()) {
                 callHandlerAddedInEventLoop(newCtx, executor);
@@ -225,6 +248,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void addLast0(AbstractChannelHandlerContext newCtx) {
+        //newCtx=new DefaultChannelHandlerContext()
         AbstractChannelHandlerContext prev = tail.prev;
         newCtx.prev = prev;
         newCtx.next = tail;
@@ -369,6 +393,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(ChannelHandler... handlers) {
+        //handlers=new ChannelInitializer<Channel>
         return addLast(null, handlers);
     }
 
@@ -382,6 +407,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (h == null) {
                 break;
             }
+            //executor=null
+            //name =null
+            //h=new ChannelInitializer<Channel>
             addLast(executor, null, h);
         }
 
@@ -646,8 +674,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         assert channel.eventLoop().inEventLoop();
         if (firstRegistration) {
             firstRegistration = false;
-            // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
-            // that were added before the registration was done.
+            // 我们现在注册到EventLoop。是时候调用通道处理程序的回调了，
+            // 这些都是在注册之前添加的。
             callHandlerAddedForAllHandlers();
         }
     }
@@ -927,6 +955,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
+        //在新连接接入时 msg是NioSocketChannel
         AbstractChannelHandlerContext.invokeChannelRead(head, msg);
         return this;
     }
@@ -1110,17 +1139,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             assert !registered;
 
-            // This Channel itself was registered.
+            // 该通道本身已注册。
             registered = true;
+            //那么这个this.pendingHandlerCallbackHead的值是从哪来的呢？
+            //答：从callHandlerCallbackLater()来的，当pipeline【DefaultChannelPipeline】调用了addFirst、addLast、addBefore、addAfter中
+            // 的其中一个，那么callHandlerCallbackLater()方法就会被调用到，this.pendingHandlerCallbackHead也就会有值，其值只有两种
+            //PendingHandlerAddedTask或者PendingHandlerRemovedTask
 
             pendingHandlerCallbackHead = this.pendingHandlerCallbackHead;
-            // Null out so it can be GC'ed.
             this.pendingHandlerCallbackHead = null;
         }
 
-        // This must happen outside of the synchronized(...) block as otherwise handlerAdded(...) may be called while
-        // holding the lock and so produce a deadlock if handlerAdded(...) will try to add another handler from outside
-        // the EventLoop.
+        //这必须发生在synchronized(…)块之外，否则handlerAdded(…)可能在while中被调用
+        //如果handleradd(…)试图从外部添加另一个处理程序，则会持有锁，从而产生死锁
+        // EventLoop。
         PendingHandlerCallback task = pendingHandlerCallbackHead;
         while (task != null) {
             task.execute();
@@ -1456,6 +1488,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         void execute() {
+            //ctx.executor();  当ctx中的executor为空的时候  获取NioEventLoop
             EventExecutor executor = ctx.executor();
             if (executor.inEventLoop()) {
                 callHandlerAdded0(ctx);

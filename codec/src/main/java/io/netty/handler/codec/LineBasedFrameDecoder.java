@@ -35,17 +35,19 @@ import java.util.List;
  */
 public class LineBasedFrameDecoder extends ByteToMessageDecoder {
 
-    /** Maximum length of a frame we're willing to decode.  */
+    /** 解码的最大长度.  */
     private final int maxLength;
-    /** Whether or not to throw an exception as soon as we exceed maxLength. */
+    /** 是否在超过maxLength时立即抛出异常。 */
     private final boolean failFast;
+    /**是否解析换行符(\n,\r\n)*/
     private final boolean stripDelimiter;
 
-    /** True if we're discarding input because we're already over maxLength.  */
+    /** 如果因为已经超过maxLength的长度，而丢弃数据，则为True。  */
     private boolean discarding;
+    /**已经丢弃多少字节*/
     private int discardedBytes;
 
-    /** Last scan position. */
+    /**最后一次扫描的位置 */
     private int offset;
 
     /**
@@ -96,32 +98,46 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      *                          be created.
      */
     protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        //返回\r\n的下标位置
         final int eol = findEndOfLine(buffer);
         if (!discarding) {
             if (eol >= 0) {
                 final ByteBuf frame;
+                //算出本次要截取数据的长度
                 final int length = eol - buffer.readerIndex();
+                //判断\n前面是否是\r  是返回2  不是返回1
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
 
+                //如果读取的长度>指定的最大长度
                 if (length > maxLength) {
+                    //设置此缓冲区的readerIndex。  跳过这段数据
                     buffer.readerIndex(eol + delimLength);
                     fail(ctx, length);
                     return null;
                 }
 
+                //判断解析的数据是否要带\r\n
                 if (stripDelimiter) {
+                    //返回从当前readerIndex开始的缓冲区子区域的一个新保留的片
+                    //返回到\r\n的有效数据 不包括\r\n
                     frame = buffer.readRetainedSlice(length);
+                    //跳过\r\n
                     buffer.skipBytes(delimLength);
                 } else {
+                    //截取到\r\n的有效数据 包括\r\n
                     frame = buffer.readRetainedSlice(length + delimLength);
                 }
-
                 return frame;
             } else {
+                //如果没有找到\r\n
                 final int length = buffer.readableBytes();
+                //如果本次数据的可读长度》最大可读长度
                 if (length > maxLength) {
+                    //设置丢弃的长度为本次buffer的可读取长度
                     discardedBytes = length;
+                    //跳过本次数据
                     buffer.readerIndex(buffer.writerIndex());
+                    //设置为丢弃模式
                     discarding = true;
                     offset = 0;
                     if (failFast) {
@@ -131,19 +147,28 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
                 return null;
             }
         } else {
+            //找到了\r\n
             if (eol >= 0) {
+                //以前丢弃的数据长度+本次可读的数据长度
                 final int length = discardedBytes + eol - buffer.readerIndex();
-                final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
+                //拿到分隔符的长度
+                final int delimLength = buffer.getByte(eol) == '\r' ? 2 : 1;
+                //跳过（丢弃）本次数据
                 buffer.readerIndex(eol + delimLength);
+                //设置丢弃数据长度为0
                 discardedBytes = 0;
+                //设置非丢弃模式
                 discarding = false;
                 if (!failFast) {
                     fail(ctx, length);
                 }
             } else {
+                //没找到\r\n
+                //丢弃的数据长度+本次可读数据的长度
                 discardedBytes += buffer.readableBytes();
+                //跳过本次可读取的数据
                 buffer.readerIndex(buffer.writerIndex());
-                // We skip everything in the buffer, we need to set the offset to 0 again.
+                // 我们跳过缓冲区中的所有内容，需要再次将偏移量设置为0。
                 offset = 0;
             }
             return null;
@@ -161,8 +186,8 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * Returns the index in the buffer of the end of line found.
-     * Returns -1 if no end of line was found in the buffer.
+     * 返回找到的行末尾的缓冲区中的索引。
+     * 如果缓冲区中没有找到行尾，则返回-1。
      */
     private int findEndOfLine(final ByteBuf buffer) {
         int totalLength = buffer.readableBytes();

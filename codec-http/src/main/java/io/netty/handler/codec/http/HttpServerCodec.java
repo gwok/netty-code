@@ -41,6 +41,9 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
      * {@code maxChunkSize (8192)}).
      */
     public HttpServerCodec() {
+        //maxInitialLineLength  初始行的最大长度(例如“GET / HTTP/1.0”或“HTTP/1.0 200 OK”)如果初始行的长度超过这个值，将引发TooLongFrameException。
+        //maxHeaderSize   所有标题的最大长度。如果每个头的长度之和超过此值，将引发TooLongFrameException。
+        //maxChunkSize 内容或每个块的最大长度。如果内容长度(或每个块的长度)超过此值，则内容或块将被分割为多个HttpContents，其长度最大为maxChunkSize。
         this(4096, 8192, 8192);
     }
 

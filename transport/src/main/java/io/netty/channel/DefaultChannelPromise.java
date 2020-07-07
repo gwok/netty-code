@@ -49,6 +49,8 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelPromise(Channel channel, EventExecutor executor) {
+        //channel=NioServerSocketChannel
+        //executor=NioEventLoop
         super(executor);
         this.channel = checkNotNull(channel, "channel");
     }
@@ -65,6 +67,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
 
     @Override
     public Channel channel() {
+        //channel=NioServerSocketChannel
         return channel;
     }
 

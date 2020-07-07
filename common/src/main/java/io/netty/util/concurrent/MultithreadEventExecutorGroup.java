@@ -55,17 +55,33 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
      */
     protected MultithreadEventExecutorGroup(int nThreads, Executor executor, Object... args) {
+        //nThreads默认为零 如果是0的话  就获取CPU核数的两倍  DEFAULT_EVENT_LOOP_THREADS==CPU核数的两倍
+        //executor默认为null
+        //SelectorProvider     ServerSocketChannel就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+        //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()
+        //RejectedExecutionHandlers.reject() ===》 new RejectedExecutionHandler()
+
+        //DefaultEventExecutorChooserFactory.INSTANCE  默认事件执行选择器工厂
         this(nThreads, executor, DefaultEventExecutorChooserFactory.INSTANCE, args);
     }
 
     /**
-     * Create a new instance.
+     * 创建一个新实例。.
      *
-     * @param nThreads          the number of threads that will be used by this instance.
-     * @param executor          the Executor to use, or {@code null} if the default should be used.
-     * @param chooserFactory    the {@link EventExecutorChooserFactory} to use.
-     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     * @param nThreads          这个实例将使用的线程数。
+     * @param executor         是要使用的执行器，如果使用默认值，则为{@code null}。
+     * @param chooserFactory    要使用的{@link EventExecutorChooserFactory}。
+     * @param args              参数将传递给每个{@link #newChild(Executor, Object…)}调用
      */
+
+    //nThreads如果不传默认是0  如果是0的话  就获取CPU核数的两倍  DEFAULT_EVENT_LOOP_THREADS==CPU核数的两倍
+    //executor默认为null
+    //chooserFactory=new DefaultEventExecutorChooserFactory() 默认 事件执行策略工厂
+
+    //args参数如下
+    //SelectorProvider     ServerSocketChannel就是通过ServerSocketChannel.open()==》SelectorProvider.provider().openServerSocketChannel()创建的
+    //DefaultSelectStrategyFactory.INSTANCE===》new DefaultSelectStrategyFactory()
+    //RejectedExecutionHandlers.reject() ===》 new RejectedExecutionHandler()
     protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
                                             EventExecutorChooserFactory chooserFactory, Object... args) {
         if (nThreads <= 0) {
@@ -73,20 +89,27 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         }
 
         if (executor == null) {
+            //newDefaultThreadFactory()=线程工厂  专门创建线程的
+            //newDefaultThreadFactory()调用的是 MultithreadEventLoopGroup.newDefaultThreadFactory()
+            //最终创建的是DefaultThreadFactory，他实现了继承自jdk的ThreadFactory
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
+        //nThreads如果不传默认是0  如果是0的话  就获取CPU核数的两倍  DEFAULT_EVENT_LOOP_THREADS==CPU核数的两倍
         children = new EventExecutor[nThreads];
 
         for (int i = 0; i < nThreads; i ++) {
+            //出现异常标识
             boolean success = false;
             try {
+                //创建nThreads个nioEventLoop保存到children数组中
                 children[i] = newChild(executor, args);
                 success = true;
             } catch (Exception e) {
                 // TODO: Think about if this is a good exception type
                 throw new IllegalStateException("failed to create a child event loop", e);
             } finally {
+                //出现异常处理
                 if (!success) {
                     for (int j = 0; j < i; j ++) {
                         children[j].shutdownGracefully();
@@ -108,6 +131,12 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
 
+        //children是 new NioEventLoop() 的对象数组
+        //chooser=GenericEventExecutorChooser/PowerOfTwoEventExecutorChooser
+        //若children数组的个数是2的幂次方，则会选用PowerOfTwoEventExecutorChooser
+        //否则，选用GenericEventExecutorChooser
+        //原因：PowerOfTwoEventExecutorChooser使用的是&运算，比较快
+        //      GenericEventExecutorChooser使用的是%运算，比较慢
         chooser = chooserFactory.newChooser(children);
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
@@ -123,6 +152,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             e.terminationFuture().addListener(terminationListener);
         }
 
+        //复制一份children  只读的
         Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
         Collections.addAll(childrenSet, children);
         readonlyChildren = Collections.unmodifiableSet(childrenSet);
@@ -134,6 +164,8 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public EventExecutor next() {
+        //chooser=GenericEventExecutorChooser/PowerOfTwoEventExecutorChooser
+        //从executors对象数组中返回new NioEventLoop()对象
         return chooser.next();
     }
 
